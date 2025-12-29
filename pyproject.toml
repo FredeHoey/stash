@@ -1,0 +1,39 @@
+[project]
+name = "stash"
+version = "0.1.0"
+description = "A dotfile manager with template support"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "alembic>=1.18.1",
+    "inotify>=0.2.12",
+    "jinja2>=3.1.6",
+    "pydantic>=2.12.5",
+    "pytoml>=0.1.21",
+    "pyyaml>=6.0.3",
+    "questionary>=2.1.0",
+    "rich>=13.9.4",
+    "sqlalchemy>=2.0.45",
+]
+
+[project.scripts]
+stash = "stash.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "debugpy>=1.8.19",
+    "pyright>=1.1.408",
+    "pytest>=9.0.2",
+    "ruff>=0.14.10",
+    "ty>=0.0.8",
+    "zuban>=0.4.1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = [
+    "stash"
+]
