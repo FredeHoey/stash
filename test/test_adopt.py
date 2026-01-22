@@ -4,7 +4,7 @@ import pytest
 
 from stash.adopt import adopt_files
 from stash.config import ensure_dotfiles_module, load_config, write_config
-from stash.db import get_session, init_db
+from stash.db import get_session
 from stash.repositories import (
     DotfileModuleRepository,
     GenerationRepository,
@@ -21,7 +21,6 @@ def test_adopt_files_renames_dotfiles(tmp_path: Path):
     original.write_text("set number")
 
     db_path = tmp_path / "stash.sqlite"
-    init_db(db_path)
 
     with get_session(db_path) as session:
         generation_repo = GenerationRepository(session)
@@ -55,7 +54,6 @@ def test_adopt_files_no_deploy(tmp_path: Path):
     original.write_text("export PATH=$PATH")
 
     db_path = tmp_path / "stash.sqlite"
-    init_db(db_path)
 
     with get_session(db_path) as session:
         generation_repo = GenerationRepository(session)
@@ -89,7 +87,6 @@ def test_adopt_updates_config(tmp_path: Path):
     original.write_text("export ZDOTDIR=$HOME")
 
     db_path = tmp_path / "stash.sqlite"
-    init_db(db_path)
 
     with get_session(db_path) as session:
         generation_repo = GenerationRepository(session)
@@ -124,7 +121,6 @@ def test_adopt_files_directory(tmp_path: Path):
     (config_dir / ".env").write_text("KEY=VALUE")
 
     db_path = tmp_path / "stash.sqlite"
-    init_db(db_path)
 
     with get_session(db_path) as session:
         generation_repo = GenerationRepository(session)

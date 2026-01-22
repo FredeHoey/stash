@@ -1,14 +1,13 @@
 from datetime import datetime
 from pathlib import Path
 
-from stash.db import get_session, init_db
+from stash.db import get_session
 from stash.history import render_history
 from stash.repositories import DotfileModuleRepository, GenerationRepository
 
 
 def test_history_json_output(tmp_path: Path):
     db_path = tmp_path / "stash.sqlite"
-    init_db(db_path)
 
     created_first = datetime(2024, 1, 1, 12, 0, 0)
     created_second = datetime(2024, 1, 2, 12, 0, 0)

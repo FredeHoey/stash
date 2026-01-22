@@ -1,14 +1,13 @@
 from pathlib import Path
 
 from stash.cleanup import clean_orphan_generations
-from stash.db import get_session, init_db
+from stash.db import get_session
 from stash.repositories import DotfileModuleRepository, GenerationRepository
 
 
 def test_clean_orphan_generations(tmp_path: Path):
     db_path = tmp_path / "stash.sqlite"
     render_root = tmp_path / "rendered"
-    init_db(db_path)
 
     with get_session(db_path) as session:
         generation_repo = GenerationRepository(session)
@@ -45,7 +44,6 @@ def test_clean_orphan_generations(tmp_path: Path):
 def test_clean_removes_stale_modules(tmp_path: Path):
     db_path = tmp_path / "stash.sqlite"
     render_root = tmp_path / "rendered"
-    init_db(db_path)
 
     with get_session(db_path) as session:
         generation_repo = GenerationRepository(session)

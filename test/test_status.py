@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from stash.db import get_session, init_db
+from stash.db import get_session
 from stash.render import render_dotfiles
 from stash.repositories import (
     DotfileModuleRepository,
@@ -19,7 +19,6 @@ def test_status_detects_dirty_file(tmp_path: Path):
     (module_dir / "dot_config").write_text("value={{ value }}")
 
     db_path = tmp_path / "stash.sqlite"
-    init_db(db_path)
 
     with get_session(db_path) as session:
         generation_repo = GenerationRepository(session)
@@ -59,7 +58,6 @@ def test_status_skips_stale_modules(tmp_path: Path):
     (module_dir / "dot_config").write_text("value={{ value }}")
 
     db_path = tmp_path / "stash.sqlite"
-    init_db(db_path)
 
     with get_session(db_path) as session:
         generation_repo = GenerationRepository(session)

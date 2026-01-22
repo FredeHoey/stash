@@ -3,14 +3,13 @@ from uuid import UUID
 
 import pytest
 
-from stash.db import get_session, init_db
+from stash.db import get_session
 from stash.repositories import DotfileModuleRepository, GenerationRepository
 from stash.rollback import RollbackError, rollback_to_generation
 
 
 def test_rollback_missing_generation(tmp_path: Path):
     db_path = tmp_path / "stash.sqlite"
-    init_db(db_path)
 
     with get_session(db_path) as session:
         module_repo = DotfileModuleRepository(session)
@@ -23,7 +22,6 @@ def test_rollback_missing_generation(tmp_path: Path):
 
 def test_rollback_updates_symlink(tmp_path: Path):
     db_path = tmp_path / "stash.sqlite"
-    init_db(db_path)
 
     render_root = tmp_path / "rendered"
     target_root = tmp_path / "target"

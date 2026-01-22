@@ -12,7 +12,7 @@ from stash.adopt import (
 )
 from stash.cleanup import clean_orphan_generations
 from stash.config import ensure_dotfiles_module, load_config, write_config
-from stash.db import get_db_path, get_session, init_db
+from stash.db import get_session
 from stash.history import render_history_from_repo
 from stash.render import render_dotfiles
 from stash.repositories import (
@@ -117,8 +117,6 @@ def main():
     except FileNotFoundError as e:
         print("No config.yaml file found, exiting...")
         exit(1)
-
-    init_db()
 
     with get_session() as session:
         generation_repo = GenerationRepository(session)

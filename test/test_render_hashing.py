@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from stash.db import get_session, init_db
+from stash.db import get_session
 from stash.render import render_dotfiles
 from stash.repositories import (
     DotfileModuleRepository,
@@ -14,8 +14,6 @@ def test_render_skips_unchanged_module(tmp_path: Path):
     target = tmp_path / "deployed"
     db_path = tmp_path / "stash.sqlite"
     variables = {"my_value": 42}
-
-    init_db(db_path)
 
     with get_session(db_path) as session:
         generation_repo = GenerationRepository(session)
