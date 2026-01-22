@@ -12,7 +12,7 @@ from stash.adopt import (
 )
 from stash.cleanup import clean_orphan_generations
 from stash.config import ensure_dotfiles_module, load_config, write_config
-from stash.db import get_session, init_db
+from stash.db import get_db_path, get_session, init_db
 from stash.history import render_history_from_repo
 from stash.render import render_dotfiles
 from stash.repositories import (
@@ -21,7 +21,14 @@ from stash.repositories import (
     RenderedFileRepository,
 )
 from stash.rollback import RollbackError, rollback_to_generation
+from stash.consume import consume_changes, render_consume_results
 from stash.status import collect_status, render_status, render_status_json
+from stash.uninstall import (
+    collect_uninstall_items,
+    collect_uninstall_paths,
+    remove_uninstall_items,
+    remove_uninstall_state,
+)
 
 
 def parse_args():
@@ -37,9 +44,9 @@ def parse_args():
         help="Show generation history as JSON",
     )
     history_parser.add_argument(
-        "--module",
-        type=str,
-        help="Filter history to a single module",
+        "modules",
+        nargs="*",
+        help="Filter history to one or more modules",
     )
 
     rollback_parser = subparsers.add_parser(
@@ -93,6 +100,22 @@ def parse_args():
         help="Show status as JSON",
     )
 
+    subparsers.add_parser(
+        "uninstall",
+        help="Remove all generated files",
+    )
+
+    consume_parser = subparsers.add_parser(
+        "consume",
+        help="Sync target changes back into templates",
+    )
+    consume_parser.add_argument(
+        "modules",
+        nargs="+",
+        type=list[str],
+        help="Only consume changes for a single module",
+    )
+
     return parser.parse_args()
 
 
@@ -118,7 +141,7 @@ def main():
                 generation_repo,
                 module_repo,
                 as_json=args.json,
-                module=args.module,
+                modules=set(args.modules),
             )
             return
 
@@ -208,6 +231,52 @@ def main():
                 render_status_json(statuses)
             else:
                 render_status(statuses)
+            return
+
+        if args.command == "uninstall":
+            render_root = Path.home() / ".local/share/stash/rendered"
+            items = collect_uninstall_items(module_repo, rendered_file_repo)
+            paths = collect_uninstall_paths(
+                items,
+                get_db_path(),
+                render_root,
+            )
+            if not paths:
+                print("No generated files found.")
+                return
+
+            print("The following files will be removed:")
+            for path in paths:
+                print(f"- {path}")
+
+            confirm_first = questionary.confirm(
+                "This will remove all generated files. Continue?",
+                default=False,
+            ).ask()
+            if not confirm_first:
+                return
+
+            confirm_second = questionary.confirm(
+                "Are you absolutely sure? This cannot be undone.",
+                default=False,
+            ).ask()
+            if not confirm_second:
+                return
+
+            removed = remove_uninstall_items(items, render_root)
+            removed.extend(remove_uninstall_state(get_db_path(), render_root))
+            if removed:
+                removed_list = ", ".join(path.as_posix() for path in removed)
+                print(f"Removed {len(removed)} paths: {removed_list}")
+            return
+
+        if args.command == "consume":
+            results = consume_changes(
+                module_repo,
+                rendered_file_repo,
+                module=args.module,
+            )
+            render_consume_results(results)
             return
 
         generation = generation_repo.create()
