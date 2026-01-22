@@ -23,12 +23,6 @@ from stash.repositories import (
 from stash.rollback import RollbackError, rollback_to_generation
 from stash.consume import consume_changes, render_consume_results
 from stash.status import collect_status, render_status, render_status_json
-from stash.uninstall import (
-    collect_uninstall_items,
-    collect_uninstall_paths,
-    remove_uninstall_items,
-    remove_uninstall_state,
-)
 
 
 def parse_args():
@@ -98,11 +92,6 @@ def parse_args():
         "--json",
         action="store_true",
         help="Show status as JSON",
-    )
-
-    subparsers.add_parser(
-        "uninstall",
-        help="Remove all generated files",
     )
 
     consume_parser = subparsers.add_parser(
@@ -231,43 +220,6 @@ def main():
                 render_status_json(statuses)
             else:
                 render_status(statuses)
-            return
-
-        if args.command == "uninstall":
-            render_root = Path.home() / ".local/share/stash/rendered"
-            items = collect_uninstall_items(module_repo, rendered_file_repo)
-            paths = collect_uninstall_paths(
-                items,
-                get_db_path(),
-                render_root,
-            )
-            if not paths:
-                print("No generated files found.")
-                return
-
-            print("The following files will be removed:")
-            for path in paths:
-                print(f"- {path}")
-
-            confirm_first = questionary.confirm(
-                "This will remove all generated files. Continue?",
-                default=False,
-            ).ask()
-            if not confirm_first:
-                return
-
-            confirm_second = questionary.confirm(
-                "Are you absolutely sure? This cannot be undone.",
-                default=False,
-            ).ask()
-            if not confirm_second:
-                return
-
-            removed = remove_uninstall_items(items, render_root)
-            removed.extend(remove_uninstall_state(get_db_path(), render_root))
-            if removed:
-                removed_list = ", ".join(path.as_posix() for path in removed)
-                print(f"Removed {len(removed)} paths: {removed_list}")
             return
 
         if args.command == "consume":
