@@ -114,7 +114,7 @@ def main():
     config_path = args.config or args.dotfiles / "config.yaml"
     try:
         config = load_config(config_path)
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         print("No config.yaml file found, exiting...")
         exit(1)
 
