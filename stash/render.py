@@ -77,7 +77,7 @@ def render_dotfiles(
             continue
         except UndefinedError as e:
             print(f"Missing variable: {e.message} in {module / template_name}")
-            break
+            return False
 
         rendered_name = file.name.replace("dot_", ".")
         rendered_file = render_path / template_name
