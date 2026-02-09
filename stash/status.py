@@ -9,7 +9,7 @@ from uuid import UUID
 from rich.console import Console
 from rich.table import Table
 
-from stash.models import DotfileModule, RenderedFile
+from stash.models import DotfileModule
 from stash.repositories import DotfileModuleRepository, RenderedFileRepository
 
 
