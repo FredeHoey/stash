@@ -17,6 +17,9 @@ _DEFAULT_DB_PATH = Path("~/.local/state/stash/stash.sqlite")
 def get_session(db_path: Path | None = None) -> Generator[Session, None, None]:
     target_path = db_path or _DEFAULT_DB_PATH.expanduser()
 
+    if not target_path.parent.is_dir():
+        target_path.parent.mkdir()
+
     config = Config()
 
     migrations_root = importlib.resources.files("migrations")
