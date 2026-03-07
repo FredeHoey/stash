@@ -21,7 +21,6 @@ from stash.repositories import (
     RenderedFileRepository,
 )
 from stash.rollback import RollbackError, rollback_to_generation
-from stash.consume import consume_changes, render_consume_results
 from stash.status import collect_status, render_status, render_status_json
 
 
@@ -92,17 +91,6 @@ def parse_args():
         "--json",
         action="store_true",
         help="Show status as JSON",
-    )
-
-    consume_parser = subparsers.add_parser(
-        "consume",
-        help="Sync target changes back into templates",
-    )
-    consume_parser.add_argument(
-        "modules",
-        nargs="+",
-        type=list[str],
-        help="Only consume changes for a single module",
     )
 
     return parser.parse_args()
@@ -224,7 +212,7 @@ def main():
             results = consume_changes(
                 module_repo,
                 rendered_file_repo,
-                module=args.module,
+                modules=args.modules,
             )
             render_consume_results(results)
             return
