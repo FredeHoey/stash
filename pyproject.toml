@@ -1,5 +1,5 @@
 [project]
-name = "stash"
+name = "dotstash"
 version = "0.1.0"
 description = "A dotfile manager with template support"
 readme = "README.md"
