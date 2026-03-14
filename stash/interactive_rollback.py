@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import questionary
 
-from stash.models import DotfileModule, Generation
 from stash.repositories import DotfileModuleRepository, GenerationRepository
 from stash.rollback import RollbackError, rollback_to_generation
 

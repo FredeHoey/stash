@@ -1,7 +1,5 @@
 from pathlib import Path
 
-import pytest
-
 from stash.adopt import adopt_files
 from stash.config import ensure_dotfiles_module, load_config, write_config
 from stash.db import get_session

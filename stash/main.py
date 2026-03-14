@@ -208,15 +208,6 @@ def main():
                 render_status(statuses)
             return
 
-        if args.command == "consume":
-            results = consume_changes(
-                module_repo,
-                rendered_file_repo,
-                modules=args.modules,
-            )
-            render_consume_results(results)
-            return
-
         generation = generation_repo.create()
         updated_modules: list[str] = []
 
