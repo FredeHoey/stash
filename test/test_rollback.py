@@ -33,8 +33,8 @@ def test_rollback_updates_symlink(tmp_path: Path):
         module = module_repo.create(
             generation_id=generation.id,
             module_name="test",
-            output_path=str(render_root / "test" / str(generation.id)),
-            target_path=str(target_root),
+            output_path=render_root / "test" / str(generation.id),
+            target_path=target_root,
         )
 
     rendered_path = Path(module.output_path)
