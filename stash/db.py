@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 _DEFAULT_DB_PATH = Path("~/.local/state/stash/stash.sqlite")
 
+
 @contextmanager
 def get_session(db_path: Path | None = None) -> Generator[Session, None, None]:
     target_path = db_path or _DEFAULT_DB_PATH.expanduser()
