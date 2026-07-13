@@ -1,18 +1,27 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass
 from functools import wraps
 import inspect
-from typing import Any, Awaitable, Callable
+from typing import (
+    Annotated,
+    Any,
+    Awaitable,
+    Callable,
+    get_args,
+    get_origin,
+    get_type_hints,
+)
 
 from dbus_fast import BusType
 from dbus_fast.aio import MessageBus
-from dbus_fast.annotations import DBusBool, DBusStr
+from dbus_fast.annotations import DBusBool, DBusSignature, DBusStr
 from dbus_fast.constants import RequestNameReply
 from dbus_fast.errors import DBusError
 from dbus_fast.service import ServiceInterface, dbus_method
 
-from stash.hooks import HookRunner
+from stash.hooks import HookRunner, dbus_event_name
 
 
 BUS_NAME = "org.dotstash.Stash"
@@ -24,12 +33,63 @@ class DBusServiceError(RuntimeError):
     pass
 
 
-def stash_dbus_method():
+@dataclass(frozen=True)
+class DBusCommandArgument:
+    name: str
+    signature: str
+    python_type: type[Any]
+
+
+@dataclass(frozen=True)
+class DBusCommand:
+    method_name: str
+    cli_name: str
+    description: str
+    arguments: tuple[DBusCommandArgument, ...]
+
+    @property
+    def input_signature(self) -> str:
+        return "".join(argument.signature for argument in self.arguments)
+
+
+_COMMAND_ATTRIBUTE = "__stash_dbus_command__"
+
+
+def _dbus_command_argument(
+    parameter: inspect.Parameter,
+    annotation: Any,
+) -> DBusCommandArgument:
+    if get_origin(annotation) is not Annotated:
+        raise TypeError(f"D-Bus argument '{parameter.name}' must use DBus annotations")
+    python_annotation, *metadata = get_args(annotation)
+    dbus_signature = next(
+        (item.signature for item in metadata if isinstance(item, DBusSignature)),
+        None,
+    )
+    python_type = get_origin(python_annotation) or python_annotation
+    if dbus_signature is None or not isinstance(python_type, type):
+        raise TypeError(f"D-Bus argument '{parameter.name}' has an invalid annotation")
+    return DBusCommandArgument(parameter.name, dbus_signature, python_type)
+
+
+def stash_dbus_method(description: str | None = None):
     def decorate(
         function: Callable[..., Awaitable[Any]],
     ) -> Callable[..., None]:
         signature = inspect.signature(function)
         method_name = getattr(function, "__name__", function.__class__.__name__)
+        type_hints = get_type_hints(function, include_extras=True)
+        arguments = tuple(
+            _dbus_command_argument(parameter, type_hints[parameter.name])
+            for parameter in signature.parameters.values()
+            if parameter.name != "self"
+        )
+        command = DBusCommand(
+            method_name=method_name,
+            cli_name=dbus_event_name(method_name),
+            description=description or f"Call the daemon's {method_name} method",
+            arguments=arguments,
+        )
 
         @wraps(function)
         async def run_with_hooks(interface, *args, **kwargs):
@@ -50,7 +110,9 @@ def stash_dbus_method():
                 raise DBusError(f"{INTERFACE_NAME}.PostHookError", str(exc)) from exc
             return result
 
-        return dbus_method()(run_with_hooks)
+        method = dbus_method()(run_with_hooks)
+        setattr(method, _COMMAND_ATTRIBUTE, command)
+        return method
 
     return decorate
 
@@ -76,19 +138,19 @@ class StashInterface(ServiceInterface):
         self._stop_event.set()
         return True
 
-    @stash_dbus_method()
+    @stash_dbus_method("Check whether the stash daemon is available")
     async def Ping(self) -> DBusStr:
         return self.ping()
 
-    @stash_dbus_method()
+    @stash_dbus_method("Reload the daemon configuration")
     async def Reload(self) -> DBusBool:
         return await self._reload_handler()
 
-    @stash_dbus_method()
+    @stash_dbus_method("Change the active theme")
     async def SetTheme(self, name: DBusStr) -> DBusBool:
         return await self._set_theme_handler(name)
 
-    @stash_dbus_method()
+    @stash_dbus_method("Stop the stash daemon")
     async def Stop(self) -> DBusBool:
         return self.stop()
 
@@ -124,3 +186,12 @@ async def start_dbus_service(
         bus.disconnect()
         raise DBusServiceError(f"D-Bus name is already owned: {BUS_NAME}")
     return bus
+
+
+def get_dbus_commands() -> tuple[DBusCommand, ...]:
+    commands: list[DBusCommand] = []
+    for value in vars(StashInterface).values():
+        command = getattr(value, _COMMAND_ATTRIBUTE, None)
+        if isinstance(command, DBusCommand):
+            commands.append(command)
+    return tuple(commands)

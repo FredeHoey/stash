@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import json
 from pathlib import Path
 from typing import Any
 
@@ -8,6 +9,8 @@ import questionary
 from stash.adopt import adopt_files, common_path, expand_adopt_paths
 from stash.config import add_dotfiles_module, load_config, write_config
 from stash.daemon import DaemonError, run_daemon
+from stash.dbus_client import DBusClientError, call_dbus_command, format_dbus_result
+from stash.dbus_service import DBusCommand, get_dbus_commands
 from stash.systemd import SystemdInstallError, install_user_service
 
 
@@ -40,7 +43,36 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     systemd_install_parser.set_defaults(func=systemd_install_command)
 
+    for command in get_dbus_commands():
+        command_parser = subparsers.add_parser(
+            command.cli_name,
+            help=command.description,
+        )
+        command_parser.set_defaults(func=dbus_command, command_spec=command)
+        for argument in command.arguments:
+            command_parser.add_argument(
+                argument.name,
+                type=_cli_argument_type(argument.python_type),
+            )
+
     return parser.parse_args(argv)
+
+
+def _parse_bool(value: str) -> bool:
+    normalized = value.lower()
+    if normalized in {"true", "yes", "1"}:
+        return True
+    if normalized in {"false", "no", "0"}:
+        return False
+    raise argparse.ArgumentTypeError(f"Expected a boolean value, got: {value}")
+
+
+def _cli_argument_type(python_type: type[Any]):
+    if python_type is bool:
+        return _parse_bool
+    if python_type in {str, int, float}:
+        return python_type
+    return json.loads
 
 
 def load_command_config(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]:
@@ -114,6 +146,20 @@ def adopt_command(args: argparse.Namespace) -> int:
     write_config(config_path, config)
     print(f"Adopted {module_name}; the daemon will deploy changes")
     print(f"Module created at {module_dir}")
+    return 0
+
+
+def dbus_command(args: argparse.Namespace) -> int:
+    command: DBusCommand = args.command_spec
+    arguments = [getattr(args, argument.name) for argument in command.arguments]
+    try:
+        result = asyncio.run(call_dbus_command(command, arguments))
+    except DBusClientError as exc:
+        print(str(exc))
+        return 1
+    output = format_dbus_result(result)
+    if output:
+        print(output)
     return 0
 
 

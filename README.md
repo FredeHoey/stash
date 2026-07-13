@@ -13,16 +13,17 @@ symlinks point there while the daemon is running. Changes to `config.yaml` and
 files in configured modules trigger a complete live render. Template or config
 errors leave the previous live configuration active.
 
-The daemon owns `org.dotstash.Stash` on the user session bus. Its initial
-versioned interface supports health checks, explicit reloads, theme changes,
-and graceful stops:
+The daemon owns `org.dotstash.Stash` on the user session bus. Each D-Bus method
+is also exposed dynamically as a top-level CLI command:
 
 ```console
-busctl --user call org.dotstash.Stash /org/dotstash/Stash org.dotstash.Stash1 Ping
-busctl --user call org.dotstash.Stash /org/dotstash/Stash org.dotstash.Stash1 Reload
-busctl --user call org.dotstash.Stash /org/dotstash/Stash org.dotstash.Stash1 SetTheme s dark
-busctl --user call org.dotstash.Stash /org/dotstash/Stash org.dotstash.Stash1 Stop
+stash ping
+stash reload
+stash set-theme dark
+stash stop
 ```
+
+These commands are D-Bus clients and require the daemon to already be running.
 
 Themes use the Base16 color names. `theme` selects the initial theme, while a
 `SetTheme` call changes it for the lifetime of the daemon:
