@@ -102,6 +102,32 @@ def test_set_theme_runs_action_before_hook_with_named_argument():
     asyncio.run(run())
 
 
+def test_list_themes_returns_available_names():
+    async def run():
+        async def reload_handler():
+            return True
+
+        async def set_theme_handler(name: str):
+            return bool(name)
+
+        async def list_themes_handler():
+            return ["kanagawa", "solarized"]
+
+        interface = StashInterface(
+            reload_handler,
+            set_theme_handler,
+            asyncio.Event(),
+            FakeHookRunner(),
+            list_themes_handler,
+        )
+
+        result = await interface.ListThemes.__wrapped__(interface)
+
+        assert result == ["kanagawa", "solarized"]
+
+    asyncio.run(run())
+
+
 @pytest.mark.parametrize(
     ("failed_phase", "action_runs"),
     [("pre", False), ("post", True)],

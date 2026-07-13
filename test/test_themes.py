@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from stash.config import BASE16_COLOR_NAMES, template_variables
+from stash.config import BASE16_COLOR_NAMES, template_variables, theme_names
 from stash.live import render_live
 
 
@@ -31,6 +31,11 @@ def test_template_variables_expose_selected_theme_as_colors(tmp_path: Path):
     assert default_variables["colors"]["base01"] == "dark-base01"
     assert light_variables["theme"] == "light"
     assert light_variables["colors"]["base01"] == "light-base01"
+
+
+def test_theme_names_are_sorted():
+    assert theme_names(_config()) == ["dark", "light"]
+    assert theme_names({}) == []
 
 
 def test_old_colors_mapping_is_rejected(tmp_path: Path):

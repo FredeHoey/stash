@@ -50,4 +50,6 @@ def format_dbus_result(values: list[Any]) -> str:
             return str(value).lower()
         return str(value)
 
-    return " ".join(format_value(value) for value in values)
+    if len(values) == 1 and isinstance(values[0], list):
+        values = values[0]
+    return "\n".join(format_value(value) for value in values)

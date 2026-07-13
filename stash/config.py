@@ -40,6 +40,17 @@ def module_target(module_name: str, module_config: dict[str, Any]) -> Path:
     return Path.home() / ".config" / module_name
 
 
+def theme_names(config: dict[str, Any]) -> list[str]:
+    themes = config.get("themes")
+    if themes is None:
+        return []
+    if not isinstance(themes, dict):
+        raise ValueError("Config 'themes' must be a mapping")
+    if not all(isinstance(name, str) for name in themes):
+        raise ValueError("Config theme names must be strings")
+    return sorted(themes)
+
+
 def template_variables(
     config: dict[str, Any],
     dotfiles: Path,

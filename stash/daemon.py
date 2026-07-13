@@ -20,7 +20,7 @@ from inotify.constants import (
 )
 import yaml
 
-from stash.config import load_config, resolve_theme
+from stash.config import load_config, resolve_theme, theme_names
 from stash.dbus_service import DBusServiceError, start_dbus_service
 from stash.hooks import HookRunner
 from stash.live import DaemonError, LiveState, render_live
@@ -175,10 +175,14 @@ async def run_daemon(config_path: Path, dotfiles: Path, live_root: Path) -> None
             print(f"Theme changed to {name}")
             return True
 
+        async def list_themes_handler() -> list[str]:
+            return theme_names(load_config(config_path))
+
         try:
             bus = await start_dbus_service(
                 reload_handler,
                 set_theme_handler,
+                list_themes_handler,
                 stop_event,
                 HookRunner(config_path, dotfiles, lambda: active_theme),
             )

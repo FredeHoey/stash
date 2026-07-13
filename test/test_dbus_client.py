@@ -68,3 +68,9 @@ def test_call_dbus_command_surfaces_daemon_errors(monkeypatch):
         assert str(exc) == "unknown theme"
     else:
         raise AssertionError("Expected the D-Bus error to reach the client")
+
+
+def test_theme_list_result_is_printed_one_name_per_line():
+    assert dbus_client.format_dbus_result([["kanagawa", "solarized"]]) == (
+        "kanagawa\nsolarized"
+    )

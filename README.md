@@ -19,6 +19,7 @@ is also exposed dynamically as a top-level CLI command:
 ```console
 stash ping
 stash reload
+stash list-themes
 stash set-theme dark
 stash stop
 ```

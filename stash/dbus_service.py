@@ -27,6 +27,7 @@ from stash.hooks import HookRunner, dbus_event_name
 BUS_NAME = "org.dotstash.Stash"
 INTERFACE_NAME = "org.dotstash.Stash1"
 OBJECT_PATH = "/org/dotstash/Stash"
+DBusStrList = Annotated[list[str], DBusSignature("as")]
 
 
 class DBusServiceError(RuntimeError):
@@ -124,10 +125,12 @@ class StashInterface(ServiceInterface):
         set_theme_handler: Callable[[str], Awaitable[bool]],
         stop_event: asyncio.Event,
         hook_runner: HookRunner,
+        list_themes_handler: Callable[[], Awaitable[list[str]]] | None = None,
     ) -> None:
         super().__init__(INTERFACE_NAME)
         self._reload_handler = reload_handler
         self._set_theme_handler = set_theme_handler
+        self._list_themes_handler = list_themes_handler or _empty_theme_list
         self._stop_event = stop_event
         self._hook_runner = hook_runner
 
@@ -150,6 +153,10 @@ class StashInterface(ServiceInterface):
     async def SetTheme(self, name: DBusStr) -> DBusBool:
         return await self._set_theme_handler(name)
 
+    @stash_dbus_method("List the available themes")
+    async def ListThemes(self) -> DBusStrList:
+        return await self._list_themes_handler()
+
     @stash_dbus_method("Stop the stash daemon")
     async def Stop(self) -> DBusBool:
         return self.stop()
@@ -158,6 +165,7 @@ class StashInterface(ServiceInterface):
 async def start_dbus_service(
     reload_handler: Callable[[], Awaitable[bool]],
     set_theme_handler: Callable[[str], Awaitable[bool]],
+    list_themes_handler: Callable[[], Awaitable[list[str]]],
     stop_event: asyncio.Event,
     hook_runner: HookRunner,
 ) -> MessageBus:
@@ -171,6 +179,7 @@ async def start_dbus_service(
                 set_theme_handler,
                 stop_event,
                 hook_runner,
+                list_themes_handler,
             ),
         )
         reply = await bus.request_name(BUS_NAME)
@@ -186,6 +195,10 @@ async def start_dbus_service(
         bus.disconnect()
         raise DBusServiceError(f"D-Bus name is already owned: {BUS_NAME}")
     return bus
+
+
+async def _empty_theme_list() -> list[str]:
+    return []
 
 
 def get_dbus_commands() -> tuple[DBusCommand, ...]:
