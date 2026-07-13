@@ -22,6 +22,18 @@ def write_config(path: Path, config: dict[str, Any]) -> None:
         yaml.safe_dump(config, handle, sort_keys=False)
 
 
+def add_dotfiles_module(
+    config: dict[str, Any], module_name: str, target_path: Path
+) -> dict[str, Any]:
+    dotfiles = config.setdefault("dotfiles", {})
+    if not isinstance(dotfiles, dict):
+        raise ValueError("Config 'dotfiles' must be a mapping")
+    if module_name in dotfiles:
+        raise ValueError(f"Dotfile module already exists in config: {module_name}")
+    dotfiles[module_name] = {"target": target_path.as_posix()}
+    return config
+
+
 def module_target(module_name: str, module_config: dict[str, Any]) -> Path:
     if target := module_config.get("target"):
         return Path(target).expanduser()
@@ -33,7 +45,7 @@ def template_variables(
     dotfiles: Path,
     theme_name: str | None = None,
 ) -> dict[str, Any]:
-    variables = {"dotfile_dir": dotfiles.absolute().as_posix()}
+    variables: dict[str, Any] = {"dotfile_dir": dotfiles.absolute().as_posix()}
     config_variables = config.get("variables", {})
     if not isinstance(config_variables, dict):
         raise ValueError("Config 'variables' must be a mapping")
@@ -87,10 +99,3 @@ def resolve_theme(
     if not all(isinstance(value, str) for value in colors.values()):
         raise ValueError(f"Theme '{selected_name}' colors must be strings")
     return selected_name, dict(colors)
-
-
-def ensure_dotfiles_module(config: dict[str, Any], module_name: str) -> dict[str, Any]:
-    dotfiles = config.setdefault("dotfiles", {})
-    if module_name not in dotfiles:
-        dotfiles[module_name] = {}
-    return config

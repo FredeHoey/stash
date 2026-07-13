@@ -53,6 +53,18 @@ The selected mapping remains available to templates as `colors`, so existing
 references such as `{{ colors.base01 }}` continue to work. The old `colors`
 configuration mapping is no longer accepted.
 
+### Adopting files
+
+Copy existing files into a new module with:
+
+```console
+stash --dotfiles ~/.dotfiles adopt ~/.vimrc
+```
+
+The command records the files' original parent directory as the module target
+in `config.yaml`. It does not render or deploy files itself; the running daemon
+notices the new module and updates the target symlinks.
+
 ### Hooks
 
 D-Bus methods trigger pre- and post-hooks named after the kebab-case method
@@ -86,8 +98,8 @@ from running. A failing or timed-out post-hook is reported after the method has
 completed. For `SetTheme`, pre-hooks see the old theme and post-hooks see the
 newly rendered theme, allowing them to reload applications.
 
-On `SIGINT` or `SIGTERM`, stash restores each affected module's symlinks to its
-latest stored generation.
+Live symlinks remain valid when the daemon stops because the render tree is
+persistent. The next daemon start updates them atomically.
 
 Install and start a rendered systemd user service with:
 

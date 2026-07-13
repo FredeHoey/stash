@@ -23,7 +23,7 @@ import yaml
 from stash.config import load_config, resolve_theme
 from stash.dbus_service import DBusServiceError, start_dbus_service
 from stash.hooks import HookRunner
-from stash.live import DaemonError, LiveState, render_live, restore_latest
+from stash.live import DaemonError, LiveState, render_live
 
 
 _MUTATION_EVENT_NAMES = frozenset(
@@ -99,7 +99,6 @@ def _with_configured_sources(
         )
     return LiveState(
         active_links=state.active_links,
-        managed_links=state.managed_links,
         module_names=state.module_names,
         source_paths=frozenset(source_paths),
     )
@@ -215,9 +214,6 @@ async def run_daemon(config_path: Path, dotfiles: Path, live_root: Path) -> None
                     )
                 print(f"Live update failed: {exc}")
     finally:
-        if state is not None:
-            restore_latest(state, live_root)
-            print("Restored latest generation")
         if bus is not None:
             bus.disconnect()
         for signal_name in installed_signals:

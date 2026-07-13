@@ -6,9 +6,7 @@ import shutil
 from typing import Any
 
 from stash.config import module_target, template_variables
-from stash.db import get_session
 from stash.deployment import atomic_symlink
-from stash.repositories import DotfileModuleRepository, RenderedFileRepository
 from stash.templates import TemplateRenderError, render_templates
 
 
@@ -19,7 +17,6 @@ class DaemonError(RuntimeError):
 @dataclass(frozen=True)
 class LiveState:
     active_links: frozenset[Path]
-    managed_links: frozenset[Path]
     module_names: frozenset[str]
     source_paths: frozenset[Path]
 
@@ -133,47 +130,8 @@ def render_live(
         if stale_path.exists():
             shutil.rmtree(stale_path)
 
-    managed_links = set(previous_state.managed_links if previous_state else ())
-    managed_links.update(desired_links)
-    module_names = set(old_modules)
-    module_names.update(plans)
     return LiveState(
         active_links=frozenset(desired_links),
-        managed_links=frozenset(managed_links),
-        module_names=frozenset(module_names),
+        module_names=frozenset(plans),
         source_paths=frozenset(source_paths),
     )
-
-
-def restore_latest(
-    state: LiveState,
-    live_root: Path,
-    db_path: Path | None = None,
-) -> None:
-    for link_path in state.managed_links:
-        _remove_live_link(link_path, live_root)
-
-    with get_session(db_path) as session:
-        module_repo = DotfileModuleRepository(session)
-        rendered_file_repo = RenderedFileRepository(session)
-        for module_name in state.module_names:
-            module = module_repo.get_latest_by_module_name(module_name)
-            if module is None:
-                continue
-            if not module.output_path.is_dir():
-                print(
-                    f"Cannot restore {module_name}: rendered directory is missing: "
-                    f"{module.output_path}"
-                )
-                continue
-            for rendered_file in rendered_file_repo.get_by_module(module.id):
-                relative_path = rendered_file.file_path.relative_to(module.output_path)
-                if not rendered_file.file_path.exists():
-                    print(
-                        f"Cannot restore missing rendered file: {rendered_file.file_path}"
-                    )
-                    continue
-                atomic_symlink(
-                    module.target_path / relative_path,
-                    rendered_file.file_path,
-                )

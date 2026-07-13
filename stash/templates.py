@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
@@ -21,9 +20,7 @@ class TemplateRenderError(RuntimeError):
 @dataclass(frozen=True)
 class RenderedTemplate:
     relative_path: Path
-    template_path: Path
     content: str
-    content_hash: str
 
 
 def hex_color(value: Any) -> str:
@@ -67,9 +64,7 @@ def render_templates(
         rendered_templates.append(
             RenderedTemplate(
                 relative_path=relative_path,
-                template_path=template_path.resolve(),
                 content=rendered,
-                content_hash=sha256(rendered.encode()).hexdigest(),
             )
         )
 

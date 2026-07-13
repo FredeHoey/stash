@@ -8,12 +8,7 @@ from stash import main
 @pytest.mark.parametrize(
     ("argv", "expected_handler"),
     [
-        ([], main.render_command),
-        (["history"], main.history_command),
-        (["rollback", "00000000-0000-0000-0000-000000000000"], main.rollback_command),
-        (["clean"], main.clean_command),
         (["adopt", "/tmp/example"], main.adopt_command),
-        (["status"], main.status_command),
         (["daemon"], main.daemon_command),
         (["systemd-install"], main.systemd_install_command),
     ],
@@ -22,6 +17,11 @@ def test_parse_args_sets_command_handler(argv, expected_handler):
     args = main.parse_args(argv)
 
     assert args.func is expected_handler
+
+
+def test_parse_args_requires_command():
+    with pytest.raises(SystemExit, match="2"):
+        main.parse_args([])
 
 
 def test_main_dispatches_and_exits(monkeypatch):
