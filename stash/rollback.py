@@ -4,25 +4,12 @@ from pathlib import Path
 from typing import Iterable
 from uuid import UUID
 
+from stash.deployment import atomic_symlink
 from stash.repositories import DotfileModuleRepository
 
 
 class RollbackError(RuntimeError):
     pass
-
-
-def _atomic_symlink(target_path: Path, rendered_path: Path) -> None:
-    if target_path.exists():
-        if target_path.is_dir() and not target_path.is_symlink():
-            raise IsADirectoryError(
-                f"Cannot replace directory at {target_path} with a symlink"
-            )
-        target_path.unlink()
-    temp_link = target_path.with_name(f"{target_path.name}.tmp")
-    if temp_link.exists():
-        temp_link.unlink()
-    temp_link.symlink_to(rendered_path)
-    temp_link.replace(target_path)
 
 
 def rollback_to_generation(
@@ -54,7 +41,7 @@ def rollback_to_generation(
             raise RollbackError(
                 f"Rendered path missing for {record.module_name}: {rendered_path}"
             )
-        _atomic_symlink(target_path, rendered_path)
+        atomic_symlink(target_path, rendered_path)
         updated[record.module_name] = rendered_path
 
     return updated
