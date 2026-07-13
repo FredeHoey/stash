@@ -74,13 +74,14 @@ def render_live(
     dotfiles: Path,
     live_root: Path,
     previous_state: LiveState | None = None,
+    theme_name: str | None = None,
 ) -> LiveState:
     modules = config.get("dotfiles")
     if not isinstance(modules, dict):
         raise DaemonError("Config must contain a 'dotfiles' mapping")
 
     try:
-        variables = template_variables(config, dotfiles)
+        variables = template_variables(config, dotfiles, theme_name)
     except ValueError as exc:
         raise DaemonError(str(exc)) from exc
 
