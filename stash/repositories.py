@@ -65,12 +65,14 @@ class DotfileModuleRepository(BaseRepository):
         module_name: str,
         output_path: Path,
         target_path: Path,
+        config_hash: str | None = None,
     ) -> DotfileModule:
         module = DotfileModule(
             generation_id=generation_id,
             module_name=module_name,
             output_path=output_path,
             target_path=target_path,
+            config_hash=config_hash,
         )
         return self.add(module)
 

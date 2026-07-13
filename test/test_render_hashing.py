@@ -30,6 +30,7 @@ def test_render_skips_unchanged_module(tmp_path: Path):
             generation.id,
             module_repo=module_repo,
             rendered_file_repo=rendered_file_repo,
+            config_hash="first-config-hash",
         )
 
         generation_next = generation_repo.create()
@@ -42,7 +43,22 @@ def test_render_skips_unchanged_module(tmp_path: Path):
             generation_next.id,
             module_repo=module_repo,
             rendered_file_repo=rendered_file_repo,
+            config_hash="first-config-hash",
+        )
+
+        generation_after_config_change = generation_repo.create()
+        updated_after_config_change = render_dotfiles(
+            Path(__file__).parent / "assets/dotfiles/test_config",
+            "test",
+            target,
+            variables,
+            render_root,
+            generation_after_config_change.id,
+            module_repo=module_repo,
+            rendered_file_repo=rendered_file_repo,
+            config_hash="second-config-hash",
         )
 
         assert updated_first is True
         assert updated_second is False
+        assert updated_after_config_change is True

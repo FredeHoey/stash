@@ -39,6 +39,7 @@ def render_dotfiles(
     generation_id: UUID,
     module_repo: DotfileModuleRepository,
     rendered_file_repo: RenderedFileRepository,
+    config_hash: str | None = None,
 ) -> bool:
     render_path = render_root / module_name / str(generation_id)
 
@@ -97,7 +98,12 @@ def render_dotfiles(
         payload.rendered_path.relative_to(render_path): payload.content_hash
         for payload in rendered_payloads
     }
-    if existing_hashes and existing_hashes == current_hashes:
+    if (
+        existing_hashes
+        and existing_hashes == current_hashes
+        and existing_module is not None
+        and existing_module.config_hash == config_hash
+    ):
         return False
 
     render_path.mkdir(parents=True, exist_ok=True)
@@ -108,6 +114,7 @@ def render_dotfiles(
         module_name=module_name,
         output_path=render_path.resolve(),
         target_path=target.resolve(),
+        config_hash=config_hash,
     )
 
     for payload in rendered_payloads:

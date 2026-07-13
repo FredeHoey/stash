@@ -26,7 +26,7 @@ def _normalize_path(value: Path | str | None) -> Path | None:
 
 
 class PathType(TypeDecorator):
-    impl = String
+    impl = Text
     cache_ok = True
 
     def process_bind_param(self, value, dialect):
@@ -75,6 +75,7 @@ class DotfileModule(Base):
     module_name: Mapped[str] = mapped_column(String(255), index=True)
     output_path: Mapped[Path] = mapped_column(PathType)
     target_path: Mapped[Path] = mapped_column(PathType)
+    config_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     @validates("module_name")
     def _normalize_module_name(self, key, value):

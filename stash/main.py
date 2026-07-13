@@ -1,4 +1,5 @@
 import argparse
+from hashlib import sha256
 from pathlib import Path
 from uuid import UUID
 
@@ -105,6 +106,7 @@ def main():
     except FileNotFoundError:
         print("No config.yaml file found, exiting...")
         exit(1)
+    config_hash = sha256(config_path.read_bytes()).hexdigest()
 
     with get_session() as session:
         generation_repo = GenerationRepository(session)
@@ -232,6 +234,7 @@ def main():
                 generation.id,
                 module_repo=module_repo,
                 rendered_file_repo=rendered_file_repo,
+                config_hash=config_hash,
             )
             if updated:
                 updated_modules.append(module_name)
