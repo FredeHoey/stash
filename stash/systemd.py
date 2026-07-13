@@ -4,6 +4,8 @@ from pathlib import Path
 import subprocess
 import sys
 
+from stash.dbus_service import BUS_NAME
+
 
 SERVICE_NAME = "stash.service"
 
@@ -40,7 +42,8 @@ def render_user_service(
 Description=Live stash configuration
 
 [Service]
-Type=simple
+Type=dbus
+BusName={BUS_NAME}
 ExecStart={command}
 Restart=on-failure
 RestartSec=2

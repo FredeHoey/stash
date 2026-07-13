@@ -16,6 +16,8 @@ def test_render_user_service_quotes_paths(tmp_path: Path):
     assert "config%%name.yaml" in service
     assert '"--dotfiles"' in service
     assert '"daemon"' in service
+    assert "Type=dbus" in service
+    assert "BusName=org.dotstash.Stash" in service
 
 
 def test_install_user_service_reloads_enables_and_restarts(tmp_path: Path, monkeypatch):

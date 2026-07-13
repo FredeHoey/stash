@@ -20,7 +20,9 @@ from inotify.constants import (
 )
 import yaml
 
-from stash.config import load_config
+from stash.config import load_config, resolve_theme
+from stash.dbus_service import DBusServiceError, start_dbus_service
+from stash.hooks import HookRunner
 from stash.live import DaemonError, LiveState, render_live, restore_latest
 
 
@@ -106,7 +108,9 @@ def _with_configured_sources(
 async def run_daemon(config_path: Path, dotfiles: Path, live_root: Path) -> None:
     lock_file = _acquire_lock(live_root)
     state: LiveState | None = None
+    bus = None
     stop_event = asyncio.Event()
+    active_theme: str | None = None
     loop = asyncio.get_running_loop()
     installed_signals: list[signal.Signals] = []
     for signal_name in (signal.SIGINT, signal.SIGTERM):
@@ -123,25 +127,83 @@ async def run_daemon(config_path: Path, dotfiles: Path, live_root: Path) -> None
                 InotifyTree(config_path.parent.as_posix(), mask=_WATCH_MASK)
             )
 
-        state = render_live(load_config(config_path), dotfiles, live_root)
-        print(f"Watching {dotfiles} for changes")
+        initial_config = load_config(config_path)
+        initial_theme = resolve_theme(initial_config)
+        active_theme = initial_theme[0] if initial_theme is not None else None
+        state = render_live(
+            initial_config,
+            dotfiles,
+            live_root,
+            theme_name=active_theme,
+        )
+
+        def apply_config(
+            config: dict[str, Any],
+            requested_theme: str | None,
+            fallback_if_missing: bool = False,
+        ) -> None:
+            nonlocal active_theme, state
+            themes = config.get("themes")
+            if (
+                fallback_if_missing
+                and requested_theme is not None
+                and isinstance(themes, dict)
+                and requested_theme not in themes
+            ):
+                requested_theme = None
+            selected_theme = resolve_theme(config, requested_theme)
+            selected_name = selected_theme[0] if selected_theme is not None else None
+            state = render_live(
+                config,
+                dotfiles,
+                live_root,
+                state,
+                theme_name=selected_name,
+            )
+            active_theme = selected_name
+
+        async def reload_handler() -> bool:
+            apply_config(
+                load_config(config_path),
+                active_theme,
+                fallback_if_missing=True,
+            )
+            print("Live configuration updated")
+            return True
+
+        async def set_theme_handler(name: str) -> bool:
+            apply_config(load_config(config_path), name)
+            print(f"Theme changed to {name}")
+            return True
+
+        try:
+            bus = await start_dbus_service(
+                reload_handler,
+                set_theme_handler,
+                stop_event,
+                HookRunner(config_path, dotfiles, lambda: active_theme),
+            )
+        except DBusServiceError as exc:
+            raise DaemonError(str(exc)) from exc
+        print(f"Watching {dotfiles} for changes; D-Bus name: org.dotstash.Stash")
         while not stop_event.is_set():
             changed = False
             for watcher in watchers:
                 events = await asyncio.to_thread(_poll_events, watcher)
                 if _is_relevant(events, config_path, state.source_paths):
                     changed = True
+            if stop_event.is_set():
+                break
             if not changed:
                 continue
             await asyncio.sleep(0.1)
             candidate_config: dict[str, Any] | None = None
             try:
                 candidate_config = load_config(config_path)
-                state = render_live(
+                apply_config(
                     candidate_config,
-                    dotfiles,
-                    live_root,
-                    state,
+                    active_theme,
+                    fallback_if_missing=True,
                 )
                 print("Live configuration updated")
             except (DaemonError, OSError, yaml.YAMLError) as exc:
@@ -156,6 +218,8 @@ async def run_daemon(config_path: Path, dotfiles: Path, live_root: Path) -> None
         if state is not None:
             restore_latest(state, live_root)
             print("Restored latest generation")
+        if bus is not None:
+            bus.disconnect()
         for signal_name in installed_signals:
             loop.remove_signal_handler(signal_name)
         lock_file.close()

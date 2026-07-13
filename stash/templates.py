@@ -30,16 +30,21 @@ def hex_color(value: Any) -> str:
     return f"#{value}"
 
 
-def render_templates(
-    module: Path,
-    variables: dict[str, Any],
-) -> list[RenderedTemplate]:
+def template_environment(root: Path) -> Environment:
     environment = Environment(
-        loader=FileSystemLoader(module),
+        loader=FileSystemLoader(root),
         autoescape=select_autoescape(),
         undefined=StrictUndefined,
     )
     environment.filters["hex_color"] = hex_color
+    return environment
+
+
+def render_templates(
+    module: Path,
+    variables: dict[str, Any],
+) -> list[RenderedTemplate]:
+    environment = template_environment(module)
     rendered_templates: list[RenderedTemplate] = []
 
     for template_path in sorted(path for path in module.rglob("*") if path.is_file()):
