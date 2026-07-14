@@ -9,6 +9,7 @@ from typing import (
     Any,
     Awaitable,
     Callable,
+    Protocol,
     get_args,
     get_origin,
     get_type_hints,
@@ -21,13 +22,22 @@ from dbus_fast.constants import RequestNameReply
 from dbus_fast.errors import DBusError
 from dbus_fast.service import ServiceInterface, dbus_method
 
-from stash.hooks import HookRunner, dbus_event_name
+from stash.hooks import dbus_event_name
 
 
 BUS_NAME = "org.dotstash.Stash"
 INTERFACE_NAME = "org.dotstash.Stash1"
 OBJECT_PATH = "/org/dotstash/Stash"
 DBusStrList = Annotated[list[str], DBusSignature("as")]
+
+
+class HookRunner(Protocol):
+    async def run(
+        self,
+        method_name: str,
+        arguments: dict[str, Any],
+        phase: str,
+    ) -> None: ...
 
 
 class DBusServiceError(RuntimeError):

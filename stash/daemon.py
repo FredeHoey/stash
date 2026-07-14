@@ -51,7 +51,11 @@ _WATCH_MASK = (
 
 
 def _poll_events(watcher: InotifyTree) -> list[tuple[Any, ...]]:
-    return list(watcher.event_gen(timeout_s=0.25, yield_nones=False))
+    events: list[tuple[Any, ...]] = []
+    for event in watcher.event_gen(timeout_s=0.25, yield_nones=False):
+        if event is not None:
+            events.append(event)
+    return events
 
 
 def _is_relevant(

@@ -55,7 +55,7 @@ def test_dbus_method_runs_matching_hook():
             hook_runner,
         )
 
-        result = await interface.Reload.__wrapped__(interface)
+        result = await getattr(interface.Reload, "__wrapped__")(interface)
 
         assert result is True
         assert hook_runner.calls == [
@@ -90,7 +90,7 @@ def test_set_theme_runs_action_before_hook_with_named_argument():
             hook_runner,
         )
 
-        result = await interface.SetTheme.__wrapped__(interface, "dark")
+        result = await getattr(interface.SetTheme, "__wrapped__")(interface, "dark")
 
         assert result is True
         assert order == ["pre-hook", "theme:dark", "post-hook"]
@@ -121,7 +121,7 @@ def test_list_themes_returns_available_names():
             list_themes_handler,
         )
 
-        result = await interface.ListThemes.__wrapped__(interface)
+        result = await getattr(interface.ListThemes, "__wrapped__")(interface)
 
         assert result == ["kanagawa", "solarized"]
 
@@ -157,7 +157,7 @@ def test_hook_failure_respects_lifecycle_phase(failed_phase: str, action_runs: b
         )
 
         with pytest.raises(DBusError, match=f"{failed_phase} failed"):
-            await interface.Reload.__wrapped__(interface)
+            await getattr(interface.Reload, "__wrapped__")(interface)
 
         assert bool(actions) is action_runs
 
@@ -178,7 +178,7 @@ def test_dbus_method_passes_named_arguments_to_hook():
         hook_runner = FakeHookRunner()
         interface = ThemeInterface(hook_runner)
 
-        result = await interface.SetTheme.__wrapped__(interface, "dark")
+        result = await getattr(interface.SetTheme, "__wrapped__")(interface, "dark")
 
         assert result is True
         assert hook_runner.calls == [
