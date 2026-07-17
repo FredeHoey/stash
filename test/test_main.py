@@ -15,6 +15,7 @@ from stash.dbus_service import get_dbus_commands
         (["ping"], main.dbus_command),
         (["reload"], main.dbus_command),
         (["set-theme", "kanagawa"], main.dbus_command),
+        (["get-theme"], main.dbus_command),
         (["list-themes"], main.dbus_command),
         (["stop"], main.dbus_command),
     ],
@@ -33,10 +34,21 @@ def test_parse_args_requires_command():
 def test_dbus_commands_are_generated_from_decorated_methods():
     commands = {command.cli_name: command for command in get_dbus_commands()}
 
-    assert set(commands) == {"ping", "reload", "set-theme", "list-themes", "stop"}
+    assert set(commands) == {
+        "ping",
+        "reload",
+        "set-theme",
+        "get-theme",
+        "list-themes",
+        "stop",
+    }
     assert commands["set-theme"].method_name == "SetTheme"
     assert commands["set-theme"].input_signature == "s"
     assert [argument.name for argument in commands["set-theme"].arguments] == ["name"]
+
+    assert commands["get-theme"].method_name == "GetTheme"
+    assert commands["get-theme"].input_signature == ""
+    assert list(commands["get-theme"].arguments) == []
 
 
 def test_dbus_command_calls_client(monkeypatch, capsys):

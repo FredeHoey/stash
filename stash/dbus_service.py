@@ -136,11 +136,13 @@ class StashInterface(ServiceInterface):
         stop_event: asyncio.Event,
         hook_runner: HookRunner,
         list_themes_handler: Callable[[], Awaitable[list[str]]] | None = None,
+        get_theme_handler: Callable[[], Awaitable[str]] | None = None,
     ) -> None:
         super().__init__(INTERFACE_NAME)
         self._reload_handler = reload_handler
         self._set_theme_handler = set_theme_handler
         self._list_themes_handler = list_themes_handler or _empty_theme_list
+        self._get_theme_handler = get_theme_handler or _empty_theme_name
         self._stop_event = stop_event
         self._hook_runner = hook_runner
 
@@ -167,6 +169,10 @@ class StashInterface(ServiceInterface):
     async def ListThemes(self) -> DBusStrList:
         return await self._list_themes_handler()
 
+    @stash_dbus_method("Get the active theme")
+    async def GetTheme(self) -> DBusStr:
+        return await self._get_theme_handler()
+
     @stash_dbus_method("Stop the stash daemon")
     async def Stop(self) -> DBusBool:
         return self.stop()
@@ -176,6 +182,7 @@ async def start_dbus_service(
     reload_handler: Callable[[], Awaitable[bool]],
     set_theme_handler: Callable[[str], Awaitable[bool]],
     list_themes_handler: Callable[[], Awaitable[list[str]]],
+    get_theme_handler: Callable[[], Awaitable[str]],
     stop_event: asyncio.Event,
     hook_runner: HookRunner,
 ) -> MessageBus:
@@ -190,6 +197,7 @@ async def start_dbus_service(
                 stop_event,
                 hook_runner,
                 list_themes_handler,
+                get_theme_handler,
             ),
         )
         reply = await bus.request_name(BUS_NAME)
@@ -209,6 +217,10 @@ async def start_dbus_service(
 
 async def _empty_theme_list() -> list[str]:
     return []
+
+
+async def _empty_theme_name() -> str:
+    return ""
 
 
 def get_dbus_commands() -> tuple[DBusCommand, ...]:

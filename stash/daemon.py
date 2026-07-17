@@ -182,11 +182,15 @@ async def run_daemon(config_path: Path, dotfiles: Path, live_root: Path) -> None
         async def list_themes_handler() -> list[str]:
             return theme_names(load_config(config_path))
 
+        async def get_theme_handler() -> str:
+            return active_theme or ""
+
         try:
             bus = await start_dbus_service(
                 reload_handler,
                 set_theme_handler,
                 list_themes_handler,
+                get_theme_handler,
                 stop_event,
                 HookRunner(config_path, dotfiles, lambda: active_theme),
             )

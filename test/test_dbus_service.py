@@ -128,6 +128,32 @@ def test_list_themes_returns_available_names():
     asyncio.run(run())
 
 
+def test_get_theme_returns_active_name():
+    async def run():
+        async def reload_handler():
+            return True
+
+        async def set_theme_handler(name: str):
+            return bool(name)
+
+        async def get_theme_handler():
+            return "kanagawa"
+
+        interface = StashInterface(
+            reload_handler,
+            set_theme_handler,
+            asyncio.Event(),
+            FakeHookRunner(),
+            get_theme_handler=get_theme_handler,
+        )
+
+        result = await getattr(interface.GetTheme, "__wrapped__")(interface)
+
+        assert result == "kanagawa"
+
+    asyncio.run(run())
+
+
 @pytest.mark.parametrize(
     ("failed_phase", "action_runs"),
     [("pre", False), ("post", True)],
