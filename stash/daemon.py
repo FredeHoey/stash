@@ -20,7 +20,7 @@ from inotify.constants import (
 )
 import yaml
 
-from stash.config import load_config, resolve_theme, theme_names
+from stash.config import load_config, resolve_theme, template_variables, theme_names
 from stash.dbus_service import DBusServiceError, start_dbus_service
 from stash.hooks import HookRunner
 from stash.live import DaemonError, LiveState, render_live
@@ -58,25 +58,37 @@ def _poll_events(watcher: InotifyTree) -> list[tuple[Any, ...]]:
     return events
 
 
-def _is_relevant(
+def _changed_paths(
     events: Iterable[tuple[Any, ...]],
     config_path: Path,
     source_paths: Iterable[Path],
-) -> bool:
+) -> set[Path]:
+    changed_paths: set[Path] = set()
     for _, event_names, watched_path, filename in events:
         if _MUTATION_EVENT_NAMES.isdisjoint(event_names):
             continue
         changed_path = (Path(watched_path) / filename).resolve(strict=False)
         if changed_path == config_path.resolve():
-            return True
+            changed_paths.add(changed_path)
+            continue
         for source in source_paths:
             if changed_path == source:
-                return True
+                changed_paths.add(changed_path)
+                break
             if changed_path.is_relative_to(source):
                 relative_path = changed_path.relative_to(source)
                 if not relative_path.parts or relative_path.parts[0] != ".git":
-                    return True
-    return False
+                    changed_paths.add(changed_path)
+                    break
+    return changed_paths
+
+
+def _is_relevant(
+    events: Iterable[tuple[Any, ...]],
+    config_path: Path,
+    source_paths: Iterable[Path],
+) -> bool:
+    return bool(_changed_paths(events, config_path, source_paths))
 
 
 def _acquire_lock(live_root: Path) -> TextIO:
@@ -105,6 +117,8 @@ def _with_configured_sources(
         active_links=state.active_links,
         module_names=state.module_names,
         source_paths=frozenset(source_paths),
+        module_targets=state.module_targets,
+        templates=state.templates,
     )
 
 
@@ -113,6 +127,7 @@ async def run_daemon(config_path: Path, dotfiles: Path, live_root: Path) -> None
     state: LiveState | None = None
     bus = None
     stop_event = asyncio.Event()
+    active_config: dict[str, Any] | None = None
     active_theme: str | None = None
     loop = asyncio.get_running_loop()
     installed_signals: list[signal.Signals] = []
@@ -133,6 +148,7 @@ async def run_daemon(config_path: Path, dotfiles: Path, live_root: Path) -> None
         initial_config = load_config(config_path)
         initial_theme = resolve_theme(initial_config)
         active_theme = initial_theme[0] if initial_theme is not None else None
+        active_config = initial_config
         state = render_live(
             initial_config,
             dotfiles,
@@ -144,8 +160,9 @@ async def run_daemon(config_path: Path, dotfiles: Path, live_root: Path) -> None
             config: dict[str, Any],
             requested_theme: str | None,
             fallback_if_missing: bool = False,
+            changed_paths: set[Path] | None = None,
         ) -> None:
-            nonlocal active_theme, state
+            nonlocal active_config, active_theme, state
             themes = config.get("themes")
             if (
                 fallback_if_missing
@@ -156,13 +173,35 @@ async def run_daemon(config_path: Path, dotfiles: Path, live_root: Path) -> None
                 requested_theme = None
             selected_theme = resolve_theme(config, requested_theme)
             selected_name = selected_theme[0] if selected_theme is not None else None
+            changed_variables: set[str] | None = None
+            if active_config is not None:
+                old_template_variables = template_variables(
+                    active_config,
+                    dotfiles,
+                    active_theme,
+                )
+                new_template_variables = template_variables(
+                    config,
+                    dotfiles,
+                    selected_name,
+                )
+                changed_variables = {
+                    name
+                    for name in set(old_template_variables)
+                    | set(new_template_variables)
+                    if old_template_variables.get(name)
+                    != new_template_variables.get(name)
+                }
             state = render_live(
                 config,
                 dotfiles,
                 live_root,
                 state,
                 theme_name=selected_name,
+                changed_paths=changed_paths,
+                changed_variables=changed_variables,
             )
+            active_config = config
             active_theme = selected_name
 
         async def reload_handler() -> bool:
@@ -199,10 +238,13 @@ async def run_daemon(config_path: Path, dotfiles: Path, live_root: Path) -> None
         print(f"Watching {dotfiles} for changes; D-Bus name: org.dotstash.Stash")
         while not stop_event.is_set():
             changed = False
+            changed_paths: set[Path] = set()
             for watcher in watchers:
                 events = await asyncio.to_thread(_poll_events, watcher)
-                if _is_relevant(events, config_path, state.source_paths):
+                watcher_paths = _changed_paths(events, config_path, state.source_paths)
+                if watcher_paths:
                     changed = True
+                    changed_paths.update(watcher_paths)
             if stop_event.is_set():
                 break
             if not changed:
@@ -215,6 +257,7 @@ async def run_daemon(config_path: Path, dotfiles: Path, live_root: Path) -> None
                     candidate_config,
                     active_theme,
                     fallback_if_missing=True,
+                    changed_paths=changed_paths - {config_path.resolve()},
                 )
                 print("Live configuration updated")
             except (DaemonError, OSError, yaml.YAMLError) as exc:
