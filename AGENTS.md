@@ -89,9 +89,6 @@
 - `ruff format .`
 - `ruff format --check .`
 
-### Type Check
-- `pyright`
-
 ### Tests
 - Full suite: `pytest`
 - Single file examples:
@@ -161,5 +158,4 @@
 ## Validation Checklist
 - Run relevant pytest tests for touched modules.
 - Run `ruff check .` and `ruff format --check .`.
-- Run `pyright` for type-sensitive changes.
 - If you touch daemon, D-Bus, hooks, or render behavior, verify both success paths and failure paths.

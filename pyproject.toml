@@ -37,7 +37,3 @@ dev = [
 pythonpath = [
     "stash"
 ]
-
-[tool.pyright]
-venvPath = "."
-venv = ".venv"
