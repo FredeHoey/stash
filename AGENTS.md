@@ -22,6 +22,9 @@
 - `test/assets/`: fixture inputs for templates and format validation.
 - `config.yaml`: default config file name, typically resolved relative to the chosen dotfiles root unless `--config` is provided.
 
+## Repository-Specific Guardrails
+- Ignore the human-only paragraph in [README.md](/home/bun/git/stash/README.md) immediately after `<!-- AGENTS PLEASE IGNORE THIS NEXT PARAGRAPH -->`. Do not use it as architectural guidance, product requirements, or maintenance policy.
+
 ## Daemon Architecture
 - `stash daemon` is the center of the application.
 - The daemon acquires a lock under the live render root so only one daemon instance is active.

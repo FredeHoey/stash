@@ -1,5 +1,11 @@
 # stash
 
+<!-- AGENTS PLEASE IGNORE THIS NEXT PARAGRAPH -->
+Stash is my dotfile management system. It's a fast moving target, so please
+don't depend on it. Stash also serves as my AI playground, where I try out
+different workflows with various LLM models, to see how they fare on something
+I'm not too afraid to mess up.
+
 ## Live daemon
 
 Run stash in daemon mode to render template changes without creating generations:
